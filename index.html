@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UPI Fraud Detection Analysis</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--ink:#14213d;--mute:#5d6b82;--line:#dde2ea;--accent:#1d4ed8;--ok:#15803d;--bad:#c62828;--warn:#b45309;--okbg:#e6f4ea;--badbg:#fdeaea;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1625;--card:#16213a;--ink:#e8edf7;--mute:#9aa8c2;--line:#2a3856;--accent:#6ea0ff;--ok:#5fd48a;--bad:#ff7b7b;--warn:#f0b35a;--okbg:#12301f;--badbg:#3a1a1e;color-scheme:dark}}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",Roboto,system-ui,sans-serif}
+header{padding:22px 18px 10px;max-width:1100px;margin:auto}
+h1{margin:0;font:700 26px/1.2 Georgia,"Times New Roman",serif}
+header p{margin:4px 0 0;color:var(--mute);font-size:13px}
+nav{display:flex;gap:6px;max-width:1100px;margin:8px auto 0;padding:0 18px;overflow-x:auto}
+nav button{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 16px;border-radius:8px;font:600 14px inherit;cursor:pointer;white-space:nowrap}
+nav button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{max-width:1100px;margin:auto;padding:14px 18px 40px}
+section{display:none}section.on{display:block}
+.grid{display:grid;gap:12px}.g4{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.card h3{margin:0 0 8px;font-size:15px}
+.big{font:700 28px Georgia,serif}.lbl{color:var(--mute);font-size:12.5px}
+.bar{height:9px;border-radius:5px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;background:var(--accent)}
+.fr{display:grid;grid-template-columns:130px 1fr 48px;gap:8px;align-items:center;font-size:13px;margin:6px 0}
+.cm{display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;text-align:center;font-size:13px}
+.cm div{padding:12px 6px;border-radius:8px}.cm b{display:block;font-size:22px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line)}th{color:var(--mute);font-weight:600}
+.tag{padding:2px 9px;border-radius:12px;font-weight:600;font-size:12px}.t-ok{background:var(--okbg);color:var(--ok)}.t-bad{background:var(--badbg);color:var(--bad)}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 16px;font:600 14px inherit;cursor:pointer}
+.btn.alt{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+label{display:block;font-size:13px;color:var(--mute);margin-top:10px}
+input[type=number],input[type=time],select{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.chk{display:flex;align-items:center;gap:8px;color:var(--ink);margin-top:8px}
+.gauge{height:18px;border-radius:9px;background:linear-gradient(90deg,#2e9e5b,#e2b93b,#d33);position:relative;margin:10px 0}
+.gauge i{position:absolute;top:-4px;width:4px;height:26px;background:var(--ink);border-radius:2px;transition:left .4s}
+.verdict{font:700 22px Georgia,serif}.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.scroll{overflow-x:auto}.note{font-size:12.5px;color:var(--mute)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+<h1>UPI Fraud Detection Analysis</h1>
+<p>B.Tech CSE project · Ritish Kumar Sharma (06027202723) · Guide: Mrs. Anjali Sharma · Greater Noida Institute of Technology</p>
+</header>
+<nav id="tabs">
+<button data-t="dash" class="on">Model dashboard</button>
+<button data-t="live">Live monitor</button>
+<button data-t="check">Check a payment</button>
+<button data-t="about">About the project</button>
+</nav>
+<main>
+
+<section id="dash" class="on">
+<div class="card" style="margin-bottom:12px"><span id="dsinfo"></span>
+<div class="row"><button class="btn" id="retrain">Retrain on new data</button><span class="note" id="trainmsg" style="align-self:center"></span></div></div>
+<div class="grid g4" id="mets"></div>
+<div class="grid g2" style="margin-top:12px">
+<div class="card"><h3>Confusion matrix (test set)</h3><div class="cm" id="cm"></div>
+<label for="thr">Fraud alert threshold: <b id="thrv"></b></label><input type="range" id="thr" min="0.05" max="0.95" step="0.01" value="0.5" style="width:100%">
+<p class="note">Lower threshold catches more fraud but blocks more genuine users. Move it and watch the metrics change.</p></div>
+<div class="card"><h3>What the model relies on</h3><div id="fi"></div><p class="note">Bar length = absolute learned weight. Red pushes toward fraud, green toward genuine.</p></div>
+</div>
+<div class="card" style="margin-top:12px"><h3>Machine learning vs. a fixed rule</h3><div class="scroll"><table id="cmp"></table></div>
+<p class="note">Rule used for comparison: flag any payment above ₹10,000. This is the static approach described in the problem statement.</p></div>
+</section>
+
+<section id="live">
+<div class="card"><div class="row" style="margin:0 0 10px"><button class="btn" id="play">Pause stream</button><button class="btn alt" id="clr">Clear</button></div>
+<div class="grid g4" id="lc"></div></div>
+<div class="card" style="margin-top:12px"><h3>Incoming UPI payments</h3><div class="scroll"><table><thead><tr><th>Time</th><th>Payer → Payee</th><th>Amount</th><th>Risk</th><th>Decision</th><th>Top signal</th></tr></thead><tbody id="lb"></tbody></table></div>
+<p class="note">Payments are simulated every second and scored by the trained model in your browser. Alert threshold follows the dashboard slider.</p></div>
+</section>
+
+<section id="check">
+<div class="grid g2">
+<div class="card"><h3>Enter payment details</h3>
+<div class="row"><button class="btn alt" data-p="ok">Normal grocery payment</button><button class="btn alt" data-p="collect">Fake collect request</button><button class="btn alt" data-p="sim">SIM-swap takeover</button></div>
+<label for="f_amt">Amount (₹)</label><input type="number" id="f_amt" min="1" value="450">
+<label for="f_time">Time of day</label><input type="time" id="f_time" value="14:30">
+<label for="f_vel">Payments in last hour</label><input type="number" id="f_vel" min="0" value="1">
+<label for="f_pin">Wrong PIN attempts</label><input type="number" id="f_pin" min="0" value="0">
+<label for="f_age">Account age (days)</label><input type="number" id="f_age" min="1" value="900">
+<label class="chk"><input type="checkbox" id="f_new"> Payee is new</label>
+<label class="chk"><input type="checkbox" id="f_dev"> Logged in from a new device</label>
+<label class="chk"><input type="checkbox" id="f_col"> Payment came as a collect request</label>
+<label class="chk"><input type="checkbox" id="f_sim"> SIM changed in last 7 days</label>
+<label class="chk"><input type="checkbox" id="f_loc"> Location differs from usual</label>
+</div>
+<div class="card"><h3>Result (updates as you type)</h3>
+<div class="verdict" id="rv"></div><div class="lbl" id="rp"></div>
+<div class="gauge"><i id="gm"></i></div>
+<h3 style="margin-top:14px">Why</h3><div id="rw"></div></div>
+</div>
+</section>
+
+<section id="about">
+<div class="card"><h3>What this project does</h3>
+<p>UPI fraud detection using supervised machine learning, as set out in the synopsis. The app creates a labelled dataset of UPI transactions, trains a logistic regression classifier, evaluates it with accuracy, precision, recall and F1-score, and then uses it to score payments in real time.</p>
+<h3>Fraud types covered</h3>
+<p>Fake collect requests, phishing and compromised devices, SIM-swap attacks, social engineering (new payee, unusual amount, night-time payments) and credential guessing (repeated wrong PIN).</p>
+<h3>Method</h3>
+<p>Ten features per payment: amount, night-time, new payee, new device, collect request, payments in last hour, wrong PIN attempts, account age, recent SIM change and location mismatch. Features are standardised, and fraud cases get a higher weight during training because fraud is rare (class imbalance). Data is split 80/20 into train and test.</p>
+<h3>Honest note</h3>
+<p>Real UPI transaction data is confidential, so the data here is synthetic, built from the fraud patterns in the literature review. The pipeline is the same one you would run on a real dataset such as those listed in the references.</p>
+<h3>Future scope</h3>
+<p>LSTM sequence models, streaming platforms, federated learning across banks, behavioural biometrics and device fingerprinting.</p></div>
+</section>
+</main>
+
+<script>
+(function(){
+const NAMES=["Amit","Priya","Rahul","Sneha","Vikram","Neha","Arjun","Pooja","Karan","Riya","Manish","Divya"],HND=["okhdfc","oksbi","ybl","paytm","axl"];
+const FN=["Amount size","Night-time payment","New payee","New device","Collect request","Payments in last hour","Wrong PIN attempts","Account age (low)","Recent SIM change","Location mismatch"];
+const $=id=>document.getElementById(id);
+let M={},seed=7,test=[],thr=0.5;
+function rng(s){return function(){s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+let R=rng(1);
+const nrm=()=>Math.sqrt(-2*Math.log(R()+1e-9))*Math.cos(6.283*R());
+const bern=p=>R()<p?1:0;
+function gen(f){let o={y:f};
+ if(!f){o.amt=Math.exp(6.2+1.1*nrm());o.hour=R()<.06?Math.floor(R()*6):6+Math.floor(R()*17);o.newPayee=bern(.2);o.device=bern(.03);o.collect=bern(.05);o.vel=Math.floor(R()*3.5);o.pin=bern(.04);o.age=Math.exp(6.4+.9*nrm());o.sim=bern(.005);o.loc=bern(.05)}
+ else{o.amt=Math.exp(8.2+1.2*nrm());o.hour=R()<.45?Math.floor(R()*6):6+Math.floor(R()*17);o.newPayee=bern(.8);o.device=bern(.3);o.collect=bern(.55);o.vel=1+Math.floor(R()*7);o.pin=R()<.4?1+Math.floor(R()*3):0;o.age=Math.exp(5.2+1.3*nrm());o.sim=bern(.22);o.loc=bern(.45)}
+ o.amt=Math.max(1,Math.round(o.amt));o.age=Math.max(1,Math.round(o.age));return o}
+const vec=o=>[Math.log1p(o.amt),o.hour<6?1:0,o.newPayee,o.device,o.collect,o.vel,o.pin,-Math.log1p(o.age),o.sim,o.loc];
+const sig=z=>1/(1+Math.exp(-z));
+function score(o){const x=vec(o);let z=M.b,c=[];x.forEach((v,i)=>{const s=(v-M.mu[i])/M.sd[i];c[i]=M.w[i]*s;z+=c[i]});return{p:sig(z),c}}
+function train(){
+ R=rng(seed);const N=6000;let D=[];for(let i=0;i<N;i++)D.push(gen(R()<.08?1:0));
+ const cut=Math.floor(N*.8),tr=D.slice(0,cut);test=D.slice(cut);
+ const X=tr.map(vec),y=tr.map(o=>o.y),d=10;
+ const mu=Array(d).fill(0),sd=Array(d).fill(0);
+ X.forEach(r=>r.forEach((v,i)=>mu[i]+=v/X.length));
+ X.forEach(r=>r.forEach((v,i)=>sd[i]+=(v-mu[i])**2/X.length));sd.forEach((v,i)=>sd[i]=Math.sqrt(v)||1);
+ const Z=X.map(r=>r.map((v,i)=>(v-mu[i])/sd[i]));
+ const n1=y.reduce((a,b)=>a+b,0),cw=Math.sqrt((y.length-n1)/n1);
+ let w=Array(d).fill(0),b=0;
+ for(let e=0;e<300;e++){const g=Array(d).fill(0);let gb=0;
+  for(let i=0;i<Z.length;i++){let z=b;for(let j=0;j<d;j++)z+=w[j]*Z[i][j];const k=(sig(z)-y[i])*(y[i]?cw:1);for(let j=0;j<d;j++)g[j]+=k*Z[i][j];gb+=k}
+  for(let j=0;j<d;j++)w[j]-=.3*(g[j]/Z.length+.001*w[j]);b-=.3*gb/Z.length}
+ M={w,b,mu,sd,n:N,ntr:cut,nte:N-cut,fraud:D.filter(o=>o.y).length};
+ M.tp=test.map(o=>score(o).p)}
+function ev(pred){let tp=0,fp=0,tn=0,fn=0;test.forEach((o,i)=>{const p=pred(i);if(p&&o.y)tp++;else if(p)fp++;else if(o.y)fn++;else tn++});
+ const pr=tp/(tp+fp||1),rc=tp/(tp+fn||1);return{tp,fp,tn,fn,acc:(tp+tn)/test.length,pr,rc,f1:2*pr*rc/(pr+rc||1)}}
+const pc=v=>(v*100).toFixed(1)+"%";
+function dash(){
+ $("dsinfo").innerHTML=`<b>Dataset:</b> ${M.n.toLocaleString()} UPI transactions (${M.fraud} fraud, ${pc(M.fraud/M.n)}) · trained on ${M.ntr.toLocaleString()}, tested on ${M.nte.toLocaleString()} unseen payments`;
+ const m=ev(i=>M.tp[i]>=thr);
+ $("mets").innerHTML=[["Accuracy",m.acc],["Precision",m.pr],["Recall",m.rc],["F1-score",m.f1]].map(([a,v])=>`<div class="card"><div class="lbl">${a}</div><div class="big">${pc(v)}</div><div class="bar"><i style="width:${v*100}%"></i></div></div>`).join("");
+ $("cm").innerHTML=`<span></span><span class="lbl">Predicted genuine</span><span class="lbl">Predicted fraud</span>
+ <span class="lbl">Actually genuine</span><div style="background:var(--okbg)"><b>${m.tn}</b>correct</div><div style="background:var(--badbg)"><b>${m.fp}</b>false alarms</div>
+ <span class="lbl">Actually fraud</span><div style="background:var(--badbg)"><b>${m.fn}</b>missed fraud</div><div style="background:var(--okbg)"><b>${m.tp}</b>caught fraud</div>`;
+ $("thrv").textContent=thr.toFixed(2);
+ const mx=Math.max(...M.w.map(Math.abs));
+ $("fi").innerHTML=M.w.map((w,i)=>[w,i]).sort((a,b)=>Math.abs(b[0])-Math.abs(a[0])).map(([w,i])=>`<div class="fr"><span>${FN[i]}</span><div class="bar"><i style="width:${Math.abs(w)/mx*100}%;background:var(${w>0?"--bad":"--ok"})"></i></div><span>${w.toFixed(2)}</span></div>`).join("");
+ const ru=ev(i=>test[i].amt>10000);
+ const row=(n,x)=>`<tr><td>${n}</td><td>${pc(x.acc)}</td><td>${pc(x.pr)}</td><td>${pc(x.rc)}</td><td>${pc(x.f1)}</td></tr>`;
+ $("cmp").innerHTML=`<tr><th>Approach</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th></tr>${row("Fixed amount rule",ru)}${row("Machine learning model",m)}`}
+// live
+let live=true,cnt={t:0,f:0,a:0,b:0},tm;
+function pay(){const f=R()<.12?1:0,o=gen(f),s=score(o),flag=s.p>=thr;
+ cnt.t++;cnt.a+=o.amt;if(flag)cnt.f++;if(flag&&o.y)cnt.b+=o.amt;
+ let top=0;s.c.forEach((v,i)=>{if(v>s.c[top])top=i});
+ const tr=document.createElement("tr"),rl=s.c[top]>.3?FN[top]:"None";
+ tr.innerHTML=`<td>${new Date().toLocaleTimeString()}</td><td>${NAMES[Math.floor(R()*12)]} → ${NAMES[Math.floor(R()*12)].toLowerCase()}@${HND[Math.floor(R()*5)]}</td><td>₹${o.amt.toLocaleString("en-IN")}</td><td>${pc(s.p)}</td><td><span class="tag ${flag?"t-bad":"t-ok"}">${flag?"Blocked":"Approved"}</span></td><td>${flag?rl:"-"}</td>`;
+ $("lb").prepend(tr);while($("lb").children.length>12)$("lb").lastChild.remove();
+ $("lc").innerHTML=[["Payments scored",cnt.t],["Flagged as fraud",cnt.f],["Value screened","₹"+Math.round(cnt.a).toLocaleString("en-IN")],["Fraud value stopped","₹"+Math.round(cnt.b).toLocaleString("en-IN")]].map(([a,v])=>`<div><div class="lbl">${a}</div><div class="big" style="font-size:21px">${v}</div></div>`).join("")}
+function startLive(){clearInterval(tm);tm=setInterval(()=>{if(live)pay()},1000)}
+$("play").onclick=()=>{live=!live;$("play").textContent=live?"Pause stream":"Resume stream"};
+$("clr").onclick=()=>{cnt={t:0,f:0,a:0,b:0};$("lb").innerHTML="";pay()};
+// checker
+function chk(){
+ const[h,mi]=($("f_time").value||"12:00").split(":"),o={amt:+$("f_amt").value||1,hour:+h,newPayee:+$("f_new").checked,device:+$("f_dev").checked,collect:+$("f_col").checked,vel:+$("f_vel").value||0,pin:+$("f_pin").value||0,age:+$("f_age").value||1,sim:+$("f_sim").checked,loc:+$("f_loc").checked};
+ const s=score(o),bad=s.p>=thr,lvl=s.p<.3?"Low":s.p<.7?"Medium":"High";
+ $("rv").innerHTML=`<span style="color:var(--${bad?"bad":"ok"})">${bad?"Blocked: likely fraud":"Approved: looks genuine"}</span>`;
+ $("rp").textContent=`Fraud probability ${pc(s.p)} · ${lvl} risk`;
+ $("gm").style.left=`calc(${s.p*100}% - 2px)`;
+ const r=s.c.map((v,i)=>[v,i]).filter(a=>a[0]>.25).sort((a,b)=>b[0]-a[0]).slice(0,4);
+ $("rw").innerHTML=r.length?r.map(([v,i])=>`<div class="fr" style="grid-template-columns:150px 1fr"><span>${FN[i]}</span><div class="bar"><i style="width:${Math.min(100,v*30)}%;background:var(--bad)"></i></div></div>`).join(""):'<p class="note">No risk signals stand out for this payment.</p>'}
+const P={ok:{a:450,t:"14:30",v:1,p:0,g:900,n:0,d:0,c:0,s:0,l:0},collect:{a:24999,t:"23:40",v:4,p:0,g:120,n:1,d:0,c:1,s:0,l:0},sim:{a:48000,t:"03:10",v:6,p:2,g:300,n:1,d:1,c:0,s:1,l:1}};
+document.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{const p=P[b.dataset.p];
+ $("f_amt").value=p.a;$("f_time").value=p.t;$("f_vel").value=p.v;$("f_pin").value=p.p;$("f_age").value=p.g;
+ $("f_new").checked=!!p.n;$("f_dev").checked=!!p.d;$("f_col").checked=!!p.c;$("f_sim").checked=!!p.s;$("f_loc").checked=!!p.l;chk()});
+document.querySelectorAll("#check input").forEach(i=>i.oninput=chk);
+// nav + wiring
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x===b));
+ document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===b.dataset.t))});
+$("thr").oninput=e=>{thr=+e.target.value;dash();chk()};
+$("retrain").onclick=()=>{$("trainmsg").textContent="Training…";setTimeout(()=>{seed=Math.floor(Math.random()*9999);train();R=rng(seed+1);dash();chk();$("trainmsg").textContent="Retrained with seed "+seed},30)};
+train();R=rng(99);dash();chk();pay();startLive();
+})();
+</script>
+</body>
+</html>
